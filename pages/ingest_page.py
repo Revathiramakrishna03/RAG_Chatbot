@@ -1,5 +1,5 @@
 import streamlit as st
-from markitdown import MarkItDown
+from markdown import markdown
 from genai_services import summarize_text, chunk_text
 from chroma_services import ingest_documents
 import tempfile

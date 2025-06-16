@@ -1,5 +1,6 @@
 import os
 import tiktoken
+import streamlit as st
 from typing import List
 from openai import OpenAI
 
@@ -11,8 +12,8 @@ load_dotenv(dotenv_path=".env")
 # You need to get your Gemini API key
 
 openai_client = OpenAI(
-    api_key=os.getenv("MODEL_API_KEY"),
-    base_url=os.getenv("MODEL_BASE_URL")
+    api_key = st.secrets["OPENAI_API_KEY"] ,
+    base_url= "https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
 
