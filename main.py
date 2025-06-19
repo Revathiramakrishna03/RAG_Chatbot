@@ -1,5 +1,8 @@
 import streamlit as st
 
+import os
+os.environ['ALLOW_RESET'] = 'TRUE'
+
 st.set_page_config(page_title="RAG QnA & Summarization Chatbot", layout="wide")
 ingest_page = st.Page("pages/ingest_page.py", title="Ingest")
 chatbot_page = st.Page("pages/chatbot_page.py", title="Chatbot")

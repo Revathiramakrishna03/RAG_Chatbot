@@ -4,30 +4,33 @@ import streamlit as st
 from typing import List
 from openai import OpenAI
 
-from dotenv import load_dotenv
-
-load_dotenv(dotenv_path=".env")
-
-# Set OpenAI client with Gemini API configuration
-# You need to get your Gemini API key
-
-openai_client = OpenAI(
-    api_key = st.secrets["OPENAI_API_KEY"] ,
-    base_url= "https://generativelanguage.googleapis.com/v1beta/openai/"
-)
+# Check for API key first
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
 except KeyError:
     st.error("Please set up your OPENAI_API_KEY in Streamlit secrets")
     st.stop()
 
+# Set OpenAI client with Gemini API configuration
+openai_client = OpenAI(
+    api_key=api_key,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+)
+
+# Default model name if not specified
+MODEL_NAME = "gemini-1.5-flash"
+
 def call_llm(messages: List[dict]) -> str:
     """Helper function to call Gemini API"""
-    response = openai_client.chat.completions.create(
-        model=os.getenv("MODEL_NAME"),
-        messages=messages,
-    )
-    return response.choices[0].message.content
+    try:
+        response = openai_client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"Error calling LLM: {str(e)}")
+        return "I'm sorry, I encountered an error while processing your request."
 
 
 def summarize_text(text: str) -> str:
@@ -69,22 +72,36 @@ def chunk_text(text: str, chunk_size: int = 100, chunk_overlap: int = 10) -> Lis
     if not text:
         return []
 
-    # Use tiktoken to count tokens (or fallback to splitting by length)
+    try:
+        # Use tiktoken to count tokens
+        enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        tokens = enc.encode(text)
 
-    enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    tokens = enc.encode(text)
+        # Create chunks with overlap
+        chunks = []
+        i = 0
+        while i < len(tokens):
+            # Get chunk of size chunk_size
+            chunk_end = min(i + chunk_size, len(tokens))
+            chunks.append(enc.decode(tokens[i:chunk_end]))
+            # Move with overlap
+            i = chunk_end - chunk_overlap if chunk_end < len(tokens) else chunk_end
 
-    # Create chunks with overlap
-    chunks = []
-    i = 0
-    while i < len(tokens):
-        # Get chunk of size chunk_size
-        chunk_end = min(i + chunk_size, len(tokens))
-        chunks.append(enc.decode(tokens[i:chunk_end]))
-        # Move with overlap
-        i = chunk_end - chunk_overlap if chunk_end < len(tokens) else chunk_end
-
-    return chunks
+        return chunks
+    except Exception as e:
+        # Fallback to simple text splitting if tiktoken fails
+        words = text.split()
+        chunks = []
+        chunk_size_words = chunk_size * 4  # Rough approximation
+        overlap_words = chunk_overlap * 4
+        
+        i = 0
+        while i < len(words):
+            chunk_end = min(i + chunk_size_words, len(words))
+            chunks.append(" ".join(words[i:chunk_end]))
+            i = chunk_end - overlap_words if chunk_end < len(words) else chunk_end
+        
+        return chunks
 
 
 def answer_with_context(question: str, contexts: List[str]) -> str:
