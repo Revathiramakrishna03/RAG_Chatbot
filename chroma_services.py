@@ -1,23 +1,45 @@
 import chromadb
 import streamlit as st
 import os
+import tempfile
+import shutil
 
-# Set environment variable to allow ChromaDB reset (fixes runtime error)
+# Set environment variables for ChromaDB in Streamlit Cloud
 os.environ['ALLOW_RESET'] = 'TRUE'
+os.environ['ANONYMIZED_TELEMETRY'] = 'FALSE'
 
-try:
-    # Initialize ChromaDB client with error handling
-    chroma_client = chromadb.Client()
+# Global variables to store client and collection
+chroma_client = None
+collection = None
+
+def initialize_chromadb():
+    """Initialize ChromaDB with proper configuration for Streamlit Cloud"""
+    global chroma_client, collection
     
-    # Use a default collection name if not specified
-    collection_name = "rag_documents"  # Default name
+    if chroma_client is None:
+        try:
+            # Create a temporary directory for ChromaDB data
+            if 'chroma_db_path' not in st.session_state:
+                st.session_state.chroma_db_path = tempfile.mkdtemp()
+            
+            # Initialize ChromaDB client with ephemeral settings for cloud deployment
+            chroma_client = chromadb.EphemeralClient()
+            
+            # Use a default collection name
+            collection_name = "rag_documents"
+            
+            collection = chroma_client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}  # Specify distance metric
+            )
+            
+            return True
+            
+        except Exception as e:
+            st.error(f"Error initializing ChromaDB: {str(e)}")
+            return False
     
-    collection = chroma_client.get_or_create_collection(
-        name=collection_name
-    )
-except Exception as e:
-    st.error(f"Error initializing ChromaDB: {str(e)}")
-    st.stop()
+    return True
 
 
 def ingest_documents(docs):
@@ -26,7 +48,16 @@ def ingest_documents(docs):
     Args:
         docs: list of strings (document chunks)
     """
+    if not initialize_chromadb():
+        return 0
+        
     try:
+        # Clear existing documents first (for demo purposes)
+        try:
+            collection.delete()
+        except:
+            pass
+        
         # Ids for the docs
         ids = [f"chunk_{i}" for i in range(len(docs))]
 
@@ -49,6 +80,9 @@ def query_documents(query_text, n_results=3):
     Returns:
         List of relevant document chunks
     """
+    if not initialize_chromadb():
+        return []
+        
     try:
         results = collection.query(query_texts=[query_text], n_results=n_results)
         if 'documents' in results and results['documents']:
