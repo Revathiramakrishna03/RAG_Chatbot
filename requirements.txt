@@ -1,5 +1,5 @@
 streamlit
-chromadb==0.4.24
+chromadb
 protobuf==3.20.3
 opentelemetry-api==1.22.0
 opentelemetry-sdk==1.22.0
@@ -9,4 +9,4 @@ openai
 tiktoken
 markitdown[all]
 markdown[extra]
-grpcio==1.51.3
+grpcio>=1.58.0

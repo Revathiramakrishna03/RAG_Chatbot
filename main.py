@@ -9,5 +9,4 @@ pg = st.navigation([
     ingest_page,
     chatbot_page
 ])
-
 pg.run()
