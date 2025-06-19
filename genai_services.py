@@ -15,7 +15,11 @@ openai_client = OpenAI(
     api_key = st.secrets["OPENAI_API_KEY"] ,
     base_url= "https://generativelanguage.googleapis.com/v1beta/openai/"
 )
-
+try:
+    api_key = st.secrets["OPENAI_API_KEY"]
+except KeyError:
+    st.error("Please set up your OPENAI_API_KEY in Streamlit secrets")
+    st.stop()
 
 def call_llm(messages: List[dict]) -> str:
     """Helper function to call Gemini API"""
